@@ -17,16 +17,12 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   final _auth = Auth();
   void signWithGoogle() async {
+    await _auth.signInWithGoogle(context);
 
-
-      await _auth.signInWithGoogle(context);
-
-      Navigator.of(context).pushReplacementNamed(RegScreen.routeName);
-
+    Navigator.of(context).pushReplacementNamed(RegScreen.routeName);
   }
 
   void signWithFacebook() async {
-
     if (await _auth.signInWithFacebook(context)) {
       Navigator.of(context).pushReplacementNamed(HomeScreen.routeName);
     }
@@ -53,7 +49,7 @@ class _AuthScreenState extends State<AuthScreen> {
             const SizedBox(height: 10),
             SignInButton(
               ctx: context,
-              label: const Text('Sign In With Facebook'),
+              label: const Text('تسجيل دخول بحساب الفيسبوك'),
               icon: Image.asset(
                 'assets/images/fb.png',
                 height: 35,
@@ -63,7 +59,7 @@ class _AuthScreenState extends State<AuthScreen> {
             const SizedBox(height: 10),
             SignInButton(
               ctx: context,
-              label: const Text('Sign In With Google'),
+              label: const Text('تسجيل دخول بحساب جوجل'),
               icon: Image.asset(
                 'assets/images/google.png',
                 height: 30,
@@ -95,10 +91,9 @@ class _SignInWithEmailState extends State<SignInWithEmail> {
 
   final _auth = Auth();
   void signWithEmail() async {
-
-      isSignIn
-          ? await _auth.signInWithEmail(context,email, password)
-          : await _auth.signUpWithEmail(context,email, password);
+    isSignIn
+        ? await _auth.signInWithEmail(context, email, password)
+        : await _auth.signUpWithEmail(context, email, password);
 
     if (_auth.isSignedIn()) {
       Navigator.of(context).pushReplacementNamed(HomeScreen.routeName);
@@ -115,7 +110,7 @@ class _SignInWithEmailState extends State<SignInWithEmail> {
               width: widget.screenSize.width * .6,
               transform: Matrix4.skewX(50),
               child: Text(
-                isSignIn ? 'Sign In' : 'Sign Up',
+                isSignIn ? 'تسجيل دخول' : 'انشاء حساب',
                 style: Theme.of(context).textTheme.headline3,
                 textAlign: TextAlign.center,
               ),
@@ -130,18 +125,18 @@ class _SignInWithEmailState extends State<SignInWithEmail> {
                     TextFormField(
                       validator: (val) {
                         if (!EmailValidator.validate(val!)) {
-                          return 'please enter a valid email';
+                          return 'من فضلك ادخل ايميل صحيح';
                         }
                       },
                       decoration: const InputDecoration(
-                          label: Text('email'),
+                          label: Text('ايميل'),
                           prefixIcon: Icon(Icons.email_outlined),
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.all(
                             Radius.circular(10.0),
                           ))),
                       onFieldSubmitted: (str) => email = str.trim(),
-                      onChanged:(str) => setState(() {
+                      onChanged: (str) => setState(() {
                         email = str.trim();
                       }),
                     ),
@@ -152,12 +147,12 @@ class _SignInWithEmailState extends State<SignInWithEmail> {
                       onFieldSubmitted: (str) => password = str,
                       validator: (val) {
                         if (val!.length < 8) {
-                          return 'password is too short';
+                          return 'كلمة المرور قصيرة';
                         }
                       },
                       controller: passwordCtrl,
                       decoration: InputDecoration(
-                          label: const Text('password'),
+                          label: const Text('كلمة السر'),
                           prefixIcon: Icon(
                             showPassword
                                 ? Icons.visibility_outlined
@@ -182,14 +177,14 @@ class _SignInWithEmailState extends State<SignInWithEmail> {
                         onFieldSubmitted: (str) => rePassword = str,
                         validator: (val) {
                           if (!isSignIn && val != passwordCtrl.text) {
-                            return 'password doesn\'t match!';
+                            return 'كلمتان السر غير متطابقة';
                           }
                         },
                         decoration: isSignIn
                             ? const InputDecoration(border: InputBorder.none)
                             : InputDecoration(
-                                label: const Text('password'),
-                            prefixIcon: Icon(
+                                label: const Text('كلمة السر'),
+                                prefixIcon: Icon(
                                   showPassword
                                       ? Icons.visibility_outlined
                                       : Icons.visibility_off_outlined,
@@ -202,7 +197,7 @@ class _SignInWithEmailState extends State<SignInWithEmail> {
                       ),
                     ),
                     CheckboxListTile(
-                      title: const Text('Show password'),
+                      title: const Text('إظهار كلمة السر'),
                       value: showPassword,
                       onChanged: (val) {
                         setState(() {
@@ -214,13 +209,13 @@ class _SignInWithEmailState extends State<SignInWithEmail> {
                         onPressed: () => setState(() {
                               isSignIn = !isSignIn;
                             }),
-                        child: Text(isSignIn ? 'Sign Up' : 'Sign In',
+                        child: Text(isSignIn ? 'إنشاء حساب' : 'تسجيل دخول',
                             style: Theme.of(context).textTheme.bodyText1)),
                     SignInButton(
                       ctx: context,
                       label: Text(isSignIn
-                          ? 'Sign In With email/password'
-                          : 'Sign Up With email/password'),
+                          ? 'تسجيل دخول بالايميل وكلمة السر'
+                          : 'إنشاء حساب بالإيميل وكلة السر'),
                       icon: const Icon(
                         Icons.email,
                         size: 30,
@@ -230,7 +225,7 @@ class _SignInWithEmailState extends State<SignInWithEmail> {
                           _formKey.currentState!.save();
                           print('email : $email');
                           print('pass: $password');
-                         signWithEmail();
+                          signWithEmail();
                         }
                       },
                     ),

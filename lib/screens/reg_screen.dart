@@ -16,6 +16,7 @@ class RegScreen extends StatefulWidget {
 
 class _RegScreenState extends State<RegScreen> {
   final User? user = Auth().user;
+  final _form = GlobalKey<FormState>();
 
   DateTime? birthday;
   Map<String, String> inputs = {
@@ -24,28 +25,27 @@ class _RegScreenState extends State<RegScreen> {
     'email': '',
     'address': '',
   };
-  static final List<String> labels = [
-    'اسم المستخدم',
-    'رقم التليفون',
-    'ايميل المستخدم',
-    'العنوان',
-  ];
-  static final List<IconData> icons = [
-    Icons.person,
-    Icons.phone,
-    Icons.email,
-    Icons.my_location,
-  ];
-  Map<String, String Function(String)> validator = {
+  static final Map<String, String> labels = {
+    'name': 'اسم المستخدم',
+    'phone': 'رقم التليفون',
+    'email': 'ايميل المستخدم',
+    'address': 'العنوان',
+  };
+  static final Map<String, IconData> icons = {
+    'name': Icons.person,
+    'phone': Icons.phone,
+    'email': Icons.email,
+    'address': Icons.my_location,
+  };
+  Map<String, String? Function(String?)> validator = {
     'name': (str) {
-      if (str.isEmpty) {
+      if (str!.isEmpty) {
         return 'خطأ لا يمكن ترك هذه الخانة فارغة';
       }
       return '';
     },
-    'phone':
-        (str) {
-      if (str.isEmpty) {
+    'phone': (str) {
+      if (str!.isEmpty) {
         return 'خطأ لا يمكن ترك هذه الخانة فارغة';
       }
 
@@ -60,91 +60,118 @@ class _RegScreenState extends State<RegScreen> {
       return '';
     },
     'email': (str) {
-      if (!EmailValidator.validate(str)) {
+      if (!EmailValidator.validate(str!)) {
         return 'من فضلك ادخل ايميل صحيح';
       }
       return '';
     },
     'address': (str) {
-      if (str.isEmpty) {
+      if (str!.isEmpty) {
         return 'خطأ لا يمكن ترك هذه الخانة فارغة';
       }
       return '';
     },
   };
+  bool birthdayValidation() {
+    if (birthday!.isAfter(DateTime.now())) {
+      return false;
+    }
+    return true;
+  }
+
+  void formSubmitting() {
+    if (_form.currentState!.validate() && birthdayValidation()) {
+      _form.currentState!.save();
+    }
+  }
+
+  List<Widget> inputBuilder() {
+    List<Widget> inputList = [];
+    inputs.forEach((key, value) {
+      inputList.add(
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TextFormField(
+            decoration: InputDecoration(
+                labelText: labels[key],
+                prefixIcon: Icon(icons[key]),
+                border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(
+                  Radius.circular(10.0),
+                ))),
+            validator: validator[key],
+          ),
+        ),
+      );
+    });
+    return inputList;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery
-        .of(context)
-        .size;
+    final screenSize = MediaQuery.of(context).size;
 
     return Scaffold(
         drawer: DrawerTab(),
         appBar: AppBar(
-          title: const Text('create your profile'),
+          title: const Text('إنشاء حساب جديد'),
         ),
         body: Form(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: EditBox(
-                    width: screenSize.width * .5,
-                    height: 150,
-                    onPress: () {},
-                    child: user!.photoURL != null
-                        ? Image.network(
-                      user!.photoURL.toString(),
-                      width: 200,
-                      fit: BoxFit.fitWidth,
-                    )
-                        : const Text(
-                      'add you profile image',
-                      textAlign: TextAlign.center,
-                    ),
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: EditBox(
+                          width: screenSize.width * .5,
+                          height: 150,
+                          onPress: () {},
+                          child: user!.photoURL != null
+                              ? Image.network(
+                                  user!.photoURL.toString(),
+                                  width: 200,
+                                  fit: BoxFit.fitWidth,
+                                )
+                              : const Text(
+                                  'add you profile image',
+                                  textAlign: TextAlign.center,
+                                ),
+                        ),
+                      ),
+                      ...inputBuilder(),
+                      ListTile(
+                        trailing: const Text('تاريخ الميلاد '),
+                        leading: ElevatedButton(
+                          child: const Icon(Icons.calendar_today),
+                          onPressed: () async {
+                            birthday = await showDatePicker(
+                              context: context,
+                              initialDate: DateTime(
+                                1996,
+                              ),
+                              firstDate: DateTime(1986),
+                              lastDate: DateTime.now(),
+                            );
+                          },
+                        ),
+                      )
+                    ],
                   ),
                 ),
-                 ListView.builder(
-                    itemCount: labels.length,
-                    itemBuilder: (context, index) {
-                      final String key = inputs.keys.elementAt(index);
-
-                      // inputs.map((key, value) => null)
-                      return Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: TextFormField(
-                          decoration: InputDecoration(
-                              labelText: labels[index],
-                              prefixIcon: Icon(icons[index]),
-                              border: const OutlineInputBorder(
-                                  borderRadius: BorderRadius.all(
-                                    Radius.circular(10.0),
-                                  ))),
-                          validator: (str) {},
-                        ),
-                      );
-                    },
-                  ),
-
-                ListTile(trailing: Text('تاريخ الميلاد '),
-                  leading: ElevatedButton(child: Icon(Icons.calendar_today), onPressed: () async{
-                  birthday=await  showDatePicker(context: context,
-                        initialDate: DateTime(1996,),
-                        firstDate: DateTime(1986),
-                        lastDate: DateTime.now(),
-                        );
-                  },),)
-              ],
-            ),
+              ),
+              ElevatedButton(
+                  onPressed: formSubmitting, child: const Text('إنشاء حساب'))
+            ],
           ),
         ));
   }
 }
 
 
-curl -H 'Authorization: token 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
-git push https://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@github.com/MTH96/Servieces-Notebook.git
-https://github.com/MTH96/Servieces-Notebook.git/'
+// curl -H 'Authorization: token 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
+// git push https://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@github.com/MTH96/Servieces-Notebook.git
+// https://github.com/MTH96/Servieces-Notebook.git/'
