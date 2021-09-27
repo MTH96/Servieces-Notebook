@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:pro/models/account.dart';
 import 'package:pro/models/auth.dart';
 import 'package:pro/screens/home_screen.dart';
 import 'package:pro/screens/reg_screen.dart';
+import 'package:provider/provider.dart';
 import '../widgets/sign_in_button.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -16,21 +18,34 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   final _auth = Auth();
+  late Account _account;
   void signWithGoogle() async {
     await _auth.signInWithGoogle(context);
-
-    Navigator.of(context).pushReplacementNamed(RegScreen.routeName);
+    await signRoute();
   }
 
   void signWithFacebook() async {
-    if (await _auth.signInWithFacebook(context)) {
-      Navigator.of(context).pushReplacementNamed(HomeScreen.routeName);
+    await _auth.signInWithFacebook(context);
+
+    await signRoute();
+  }
+
+  Future<void> signRoute() async {
+    if (_auth.isSignedIn()) {
+      if (await _auth.firstSignIn()) {
+        Navigator.of(context).pushReplacementNamed(RegScreen.routeName);
+      } else {
+        _account.fromMap(await _auth.loadAccountData(), _auth.user!.uid);
+
+        Navigator.of(context).pushReplacementNamed(HomeScreen.routeName);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
+    _account = Provider.of<Account>(context);
     return Scaffold(
       body: Container(
         padding: const EdgeInsets.all(20),
@@ -45,7 +60,10 @@ class _AuthScreenState extends State<AuthScreen> {
           mainAxisAlignment: MainAxisAlignment.end,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            SignInWithEmail(screenSize: screenSize),
+            SignInWithEmail(
+              screenSize: screenSize,
+              signRoute: signRoute,
+            ),
             const SizedBox(height: 10),
             SignInButton(
               ctx: context,
@@ -74,8 +92,11 @@ class _AuthScreenState extends State<AuthScreen> {
 }
 
 class SignInWithEmail extends StatefulWidget {
-  const SignInWithEmail({Key? key, required this.screenSize}) : super(key: key);
+  const SignInWithEmail(
+      {Key? key, required this.screenSize, required this.signRoute})
+      : super(key: key);
   final Size screenSize;
+  final Future<void> Function() signRoute;
   @override
   _SignInWithEmailState createState() => _SignInWithEmailState();
 }
@@ -95,9 +116,7 @@ class _SignInWithEmailState extends State<SignInWithEmail> {
         ? await _auth.signInWithEmail(context, email, password)
         : await _auth.signUpWithEmail(context, email, password);
 
-    if (_auth.isSignedIn()) {
-      Navigator.of(context).pushReplacementNamed(HomeScreen.routeName);
-    }
+    await widget.signRoute();
   }
 
   @override

@@ -1,7 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:pro/models/account.dart';
+import 'package:pro/models/storage.dart';
+import 'package:pro/screens/home_screen.dart';
+import 'package:provider/provider.dart';
 import 'package:pro/widgets/drawer_tab.dart';
-import 'package:pro/widgets/edit_box.dart';
+import 'package:pro/widgets/image_box.dart';
 import 'package:email_validator/email_validator.dart';
 
 import '../models/auth.dart';
@@ -17,24 +23,28 @@ class RegScreen extends StatefulWidget {
 class _RegScreenState extends State<RegScreen> {
   final User? user = Auth().user;
   final _form = GlobalKey<FormState>();
-
   DateTime? birthday;
+  String imageUrl = '';
+  bool isServiceProvider = false;
+  late Account _account;
+
+  void saveImage(String imageUrl) => setState(() {
+        this.imageUrl = imageUrl;
+      });
+
   Map<String, String> inputs = {
     'name': '',
     'phone': '',
-    'email': '',
     'address': '',
   };
   static final Map<String, String> labels = {
     'name': 'اسم المستخدم',
     'phone': 'رقم التليفون',
-    'email': 'ايميل المستخدم',
     'address': 'العنوان',
   };
   static final Map<String, IconData> icons = {
     'name': Icons.person,
     'phone': Icons.phone,
-    'email': Icons.email,
     'address': Icons.my_location,
   };
   Map<String, String? Function(String?)> validator = {
@@ -59,12 +69,6 @@ class _RegScreenState extends State<RegScreen> {
       }
       return '';
     },
-    'email': (str) {
-      if (!EmailValidator.validate(str!)) {
-        return 'من فضلك ادخل ايميل صحيح';
-      }
-      return '';
-    },
     'address': (str) {
       if (str!.isEmpty) {
         return 'خطأ لا يمكن ترك هذه الخانة فارغة';
@@ -79,9 +83,22 @@ class _RegScreenState extends State<RegScreen> {
     return true;
   }
 
-  void formSubmitting() {
-    if (_form.currentState!.validate() && birthdayValidation()) {
+  void formSubmitting() async {
+    if (_form.currentState!.validate() &&
+        birthdayValidation() &&
+        imageUrl.isNotEmpty) {
       _form.currentState!.save();
+      _account.address = inputs['address'];
+      _account.username = inputs['name'];
+      _account.phone = inputs['phone'];
+      _account.imageUrl = imageUrl;
+      _account.id = Auth().user!.uid;
+      _account.birthday = birthday;
+      _account.email = Auth().user!.email;
+      final _storage = Storage();
+      await _storage.createAccount(_account.id, _account.toMap());
+      _account.notifyChanges();
+      Navigator.of(context).pushReplacementNamed(HomeScreen.routeName);
     }
   }
 
@@ -110,6 +127,7 @@ class _RegScreenState extends State<RegScreen> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
+    _account = Provider.of<Account>(context);
 
     return Scaffold(
         drawer: DrawerTab(),
@@ -126,20 +144,10 @@ class _RegScreenState extends State<RegScreen> {
                     children: [
                       Padding(
                         padding: const EdgeInsets.all(8.0),
-                        child: EditBox(
+                        child: ImageBox(
                           width: screenSize.width * .5,
                           height: 150,
-                          onPress: () {},
-                          child: user!.photoURL != null
-                              ? Image.network(
-                                  user!.photoURL.toString(),
-                                  width: 200,
-                                  fit: BoxFit.fitWidth,
-                                )
-                              : const Text(
-                                  'add you profile image',
-                                  textAlign: TextAlign.center,
-                                ),
+                          imageSavingFn: saveImage,
                         ),
                       ),
                       ...inputBuilder(),
@@ -158,7 +166,16 @@ class _RegScreenState extends State<RegScreen> {
                             );
                           },
                         ),
-                      )
+                      ),
+                      ListTile(
+                        trailing: const Text('موفر خدمات'),
+                        title: Switch.adaptive(
+                            value: isServiceProvider,
+                            onChanged: (val) => setState(() {
+                                  isServiceProvider = val;
+                                })),
+                        leading: const Text('مستقبل خدمات'),
+                      ),
                     ],
                   ),
                 ),
@@ -174,4 +191,6 @@ class _RegScreenState extends State<RegScreen> {
 
 // curl -H 'Authorization: token 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
 // git push https://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@github.com/MTH96/Servieces-Notebook.git
+//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
+//git push https://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@github.com/MTH96/Servieces-Notebook.git
 // https://github.com/MTH96/Servieces-Notebook.git/'

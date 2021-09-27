@@ -2,61 +2,72 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:pro/models/storage.dart';
 
 class Auth {
   final _auth = FirebaseAuth.instance;
+  final _storage = Storage();
 
-
-
-  get user => _auth.currentUser;
- bool isSignedIn() {
+  User? get user => _auth.currentUser;
+  bool isSignedIn() {
     bool isSigned = false;
-    if ( _auth.currentUser != null) {
-    // signed in
-    isSigned = true;
+    if (_auth.currentUser != null) {
+      // signed in
+      isSigned = true;
     } else {
-    isSigned = false;
+      isSigned = false;
     }
-
 
     return isSigned;
   }
 
-  Future<void> signInWithEmail(BuildContext context,
-       String email, String password) async {
+  Future<bool> firstSignIn() async {
+    if (!await _storage.checkUser(_auth.currentUser!.uid)) {
+      return true;
+    }
+    return false;
+  }
+
+  Future<Map<String, dynamic>?> loadAccountData() async {
+    final accountSnap = await _storage.getAccount(_auth.currentUser!.uid);
+    return accountSnap.data();
+  }
+
+  Future<void> signInWithEmail(
+      BuildContext context, String email, String password) async {
     try {
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
           email: email, password: password);
-    }on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found') {
-        showDialog(context: context, builder: (context)=>AlertDialog(
-
-          title: const Text('error'),
-          content: const Text('No user found for that email'),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Ok'))
-          ],
-        )) ;
+        showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+                  title: const Text('error'),
+                  content: const Text('No user found for that email'),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Ok'))
+                  ],
+                ));
         print('No user found for that email.');
       } else if (e.code == 'wrong-password') {
-        showDialog(context: context, builder: (context)=>AlertDialog(
-
-          title: const Text('error'),
-          content: const Text('Wrong password provided for that user.'),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Ok'))
-          ],
-        ));
+        showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+                  title: const Text('error'),
+                  content: const Text('Wrong password provided for that user.'),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Ok'))
+                  ],
+                ));
         print('Wrong password provided for that user.');
       }
-    }
-    catch(e)
-    {
-      rethrow ;
+    } catch (e) {
+      rethrow;
     }
   }
 
@@ -65,100 +76,110 @@ class Auth {
     try {
       UserCredential userCredential = await _auth
           .createUserWithEmailAndPassword(email: email, password: password);
-
     } on FirebaseAuthException catch (e) {
       if (e.code == 'weak-password') {
-        await  showDialog(context: ctx, builder: (ctx)=> AlertDialog(
-          title: const Text('error'),
-          content: const Text('The password provided is too weak.'),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Ok'))
-          ],)
-        );
+        await showDialog(
+            context: ctx,
+            builder: (ctx) => AlertDialog(
+                  title: const Text('error'),
+                  content: const Text('The password provided is too weak.'),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        child: const Text('Ok'))
+                  ],
+                ));
         print('The password provided is too weak.');
       } else if (e.code == 'email-already-in-use') {
-        await  showDialog(context: ctx, builder: (ctx)=> AlertDialog(
-          title: const Text('error'),
-          content: const Text('The account already exists for that email.'),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Ok'))
-          ],)
-        );
+        await showDialog(
+            context: ctx,
+            builder: (ctx) => AlertDialog(
+                  title: const Text('error'),
+                  content:
+                      const Text('The account already exists for that email.'),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        child: const Text('Ok'))
+                  ],
+                ));
         print('The account already exists for that email.');
       }
     } catch (e) {
-      await  showDialog(context: ctx, builder: (ctx)=> AlertDialog(
-        title: const Text('error'),
-        content: Text(e.toString()),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.of(ctx).pop(), child: const Text('Ok'))
-        ],)
-      );
+      await showDialog(
+          context: ctx,
+          builder: (ctx) => AlertDialog(
+                title: const Text('error'),
+                content: Text(e.toString()),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: const Text('Ok'))
+                ],
+              ));
       print(e);
     }
   }
 
   Future<void> signInWithGoogle(BuildContext context) async {
-    try{
-    // Trigger the authentication flow
-    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+    try {
+      // Trigger the authentication flow
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
 
-    // Obtain the auth details from the request
-    final GoogleSignInAuthentication googleAuth =
-        await googleUser!.authentication;
+      // Obtain the auth details from the request
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser!.authentication;
 
-    // Create a new credential
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
+      // Create a new credential
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
 
-    // Once signed in, return the UserCredential
-    await _auth.signInWithCredential(credential);
+      // Once signed in, return the UserCredential
+      await _auth.signInWithCredential(credential);
+    } catch (e) {
+      await showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+                title: const Text('error'),
+                content: Text(e.toString()),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: const Text('Ok'))
+                ],
+              ));
     }
-  catch (e)
-  {
-
-  await  showDialog(context: context, builder: (ctx)=> AlertDialog(
-    title: const Text('error'),
-  content: Text(e.toString()),
-  actions: [
-  TextButton(
-  onPressed: () => Navigator.of(ctx).pop(), child: const Text('Ok'))
-  ],
-  ))
-  ;
-  }
   }
 
-  Future<bool> signInWithFacebook(BuildContext ctx,) async {
-   try{ // Trigger the sign-in flow
-    final LoginResult loginResult = await FacebookAuth.instance.login();
+  Future<void> signInWithFacebook(
+    BuildContext ctx,
+  ) async {
+    try {
+      // Trigger the sign-in flow
+      final LoginResult loginResult = await FacebookAuth.instance.login();
 
-    // Create a credential from the access token
-    final OAuthCredential facebookAuthCredential =
-        FacebookAuthProvider.credential(loginResult.accessToken!.token);
+      // Create a credential from the access token
+      final OAuthCredential facebookAuthCredential =
+          FacebookAuthProvider.credential(loginResult.accessToken!.token);
 
-    // Once signed in, return the UserCredential
-    await _auth.signInWithCredential(facebookAuthCredential);
-    return true;}
-  catch(e)
-  {  await  showDialog(context: ctx, builder: (ctx)=> AlertDialog(
-    title: const Text('error'),
-  content: Text(e.toString()),
-  actions: [
-  TextButton(
-  onPressed: () => Navigator.of(ctx).pop(), child: const Text('Ok'))
-  ],)
-  );
-  print(e);
-  }
-  return false;
+      // Once signed in, return the UserCredential
+      await _auth.signInWithCredential(facebookAuthCredential);
+    } catch (e) {
+      await showDialog(
+          context: ctx,
+          builder: (ctx) => AlertDialog(
+                title: const Text('error'),
+                content: Text(e.toString()),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: const Text('Ok'))
+                ],
+              ));
+      print(e);
+    }
   }
 
   Future<void> logOut() async {
